@@ -66,7 +66,7 @@ python app.py
 
 - LangGraph + LangChain (ReAct-паттерн)
 - FAISS + sentence-transformers (all-MiniLM-L6-v2)
-- Qwen3-Next 80B через OpenRouter API
+- GPT-OSS 120B через OpenRouter API
 - Gradio 4.44
 - Spotify Tracks Dataset (10 000 треков)
 
