@@ -1,6 +1,6 @@
 # Рекомендательная система музыки: ReAct-агент с FAISS и фильтрацией по аудио-признакам
 
-DJ-агент на базе 10 000 треков Spotify с гибридным поиском и ReAct-архитектурой.
+Агент на базе 10 000 треков Spotify с гибридным поиском и ReAct-архитектурой.
 
 [Spotify Tracks Dataset](https://www.kaggle.com/datasets/maharshipandya/-spotify-tracks-dataset)
 
