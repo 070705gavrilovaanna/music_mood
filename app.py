@@ -15,7 +15,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 logging.basicConfig(level=logging.INFO)
-print("starting app")
+print('starting app')
 
 hf_token=os.environ.get('HF_TOKEN')
 if hf_token:
@@ -122,7 +122,7 @@ docs = [Document(
     }
 ) for _, r in df.iterrows()]
 
-print("documents created:", len(docs))
+print('documents created:', len(docs))
 
 emb = HuggingFaceEmbeddings(model_name='all-MiniLM-L6-v2', model_kwargs={'device': 'cpu'})
 VECTORSTORE = FAISS.from_documents(docs, emb)
@@ -192,7 +192,7 @@ def analyze_query(q):
 
 @tool
 def search_tracks(query: str) -> str:
-    """поиск треков по запросу с фильтрами по настроению, энергии, жанру."""
+    '''поиск треков по запросу с фильтрами по настроению, энергии, жанру.'''
     docs = VECTORSTORE.similarity_search(query, k=50)
     f = analyze_query(query)
     filtered = []
@@ -238,7 +238,7 @@ def search_tracks(query: str) -> str:
 
 @tool
 def get_track_info(track_name: str) -> str:
-    """получить детали конкретного трека по названию или артисту."""
+    '''получить детали конкретного трека по названию или артисту.'''
     docs = VECTORSTORE.similarity_search(track_name, k=3)
     if not docs:
         return 'Трек не найден'
@@ -256,7 +256,7 @@ def get_track_info(track_name: str) -> str:
 
 @tool
 def explain_mood(query: str) -> str:
-    """объяснить, какие аудио-фичи подходят под запрос пользователя."""
+    '''объяснить, какие аудио-фичи подходят под запрос пользователя.'''
     filters = analyze_query(query)
     parts = []
     if 'min_valence' in filters:
@@ -298,20 +298,20 @@ LLM = ChatOpenAI(
     temperature=0.3
 )
 
-SYSTEM_PROMPT = """Ты DJ-ассистент для подбора музыки.
+SYSTEM_PROMPT = '''Ты DJ-ассистент для подбора музыки.
 
 ПРАВИЛА:
 1. Всегда начинай с инструмента explain_mood, чтобы понять запрос
 2. Затем используй search_tracks для подбора треков
 3. Если нужно уточнить детали трека - используй get_track_info
 4. В финальном ответе укажи 3-5 треков с объяснением, почему они подходят, и ссылками на Spotify
-5. Отвечай на русском языке, живо, как настоящий DJ"""
+5. Отвечай на русском языке, живо, как настоящий DJ'''
 
 prompt=ChatPromptTemplate.from_messages([('system',SYSTEM_PROMPT), MessagesPlaceholder(variable_name='messages')])
 
 TOOLS = [search_tracks, get_track_info, explain_mood]
 agent = create_react_agent(LLM, TOOLS, prompt=prompt)
-print("аgent created")
+print('аgent created')
 
 
 def chat(message, history):
@@ -338,5 +338,5 @@ with gr.Blocks(title='MusicMood RAG') as demo:
         ]
     )
 
-print("launching Gradio...")
+print('launching Gradio...')
 demo.launch(server_name='0.0.0.0', server_port=7860, share=False)
