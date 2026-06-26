@@ -76,6 +76,6 @@ python app.py
 ├── app.py              # агент, инструменты, UI
 ├── requirements.txt    # зависимости
 ├── dataset.csv         # датасет Spotify
-├── .env                # API-ключи (не коммитится)
+├── .env                # API-ключи
 └── screenshots/        # скриншоты
 ```
