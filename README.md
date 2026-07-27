@@ -4,6 +4,7 @@
 
 [Spotify Tracks Dataset](https://www.kaggle.com/datasets/maharshipandya/-spotify-tracks-dataset)
 
+
 ## Возможности
 
 - ReAct-агент с 3 инструментами (explain_mood, search_tracks, get_track_info)
@@ -11,18 +12,17 @@
 - 12 аудио-фич Spotify для точного подбора
 - Понимание русского языка
 - Прямые ссылки на Spotify для каждого трека
+- Автоматическая оценка качества рекомендаций
 - LLM: GPT-OSS 120B через OpenRouter
 
----
-
-### 1. Клонирование
+## 1. Клонирование
 
 ```bash
 git clone https://github.com/YOUR_USERNAME/music-mood-rag.git
 cd music-mood-rag
 ```
 
-### 2. Виртуальное окружение
+## 2. Виртуальное окружение
 
 ```bash
 python -m venv venv
@@ -30,14 +30,13 @@ source venv/bin/activate  # Linux/Mac
 venv\Scripts\activate     # Windows
 ```
 
-### 3. Зависимости
+## 3. Зависимости
 
 ```bash
 pip install -r requirements.txt
 ```
 
-
-### 4. API-ключи
+## 4. API-ключи
 
 Создайте `.env`:
 
@@ -46,7 +45,7 @@ HF_TOKEN=your_huggingface_token
 OPENROUTER_API_KEY=your_openrouter_api_key
 ```
 
-### 5. Запуск
+## 5. Запуск
 
 ```bash
 python app.py
@@ -61,6 +60,24 @@ python app.py
 - "Спокойный джаз для работы фоном без слов"
 - "Расскажи про трек Blinding Lights"
 
+## Как работает
+
+1. Пользователь вводит запрос на русском языке
+2. Агент анализирует запрос с помощью explain_mood и определяет нужные аудио-фичи (valence, energy, tempo и др.)
+3. Выполняется семантический поиск по 10 000 трекам через FAISS
+4. Результаты фильтруются по аудио-параметрам (грустный/весёлый, быстрый/медленный, акустика/инструментал и т.д.)
+5. Агент формирует ответ с 3-5 треками, объяснением и ссылками на Spotify
+
+## Оценка качества
+
+Для каждого запроса автоматически считаются метрики:
+- Релевантность - насколько треки соответствуют запросу
+- Разнообразие - насколько треки отличаются друг от друга
+- Покрытие жанров - сколько уникальных жанров в рекомендациях
+- Новизна - насколько треки непопулярны
+
+Метрики сохраняются в `evaluation_history.json` для анализа.
+
 ## Технологии
 
 - LangGraph + LangChain (ReAct-паттерн)
@@ -74,6 +91,7 @@ python app.py
 ```
 .
 ├── app.py              # агент, инструменты, UI
+├── evaluation.py       # система оценки качества
 ├── requirements.txt    # зависимости
 ├── dataset.csv         # датасет Spotify
 ├── .env                # API-ключи
