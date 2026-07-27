@@ -11,6 +11,8 @@ from langchain_core.tools import tool
 from huggingface_hub import login
 import logging
 from dotenv import load_dotenv
+from io import BytesIO
+from evaluation import RelevanceEvaluator, MusicMetrics, MetricsLogger
 
 load_dotenv()
 
@@ -24,7 +26,15 @@ if hf_token:
 df = pd.read_csv('dataset.csv', index_col=0)
 df = df.sort_values('popularity', ascending=False).head(10000).reset_index(drop=True)
 
-print("dataset loaded, rows:", len(df))
+print('dataset loaded, rows:', len(df))
+
+
+print('Инициализация системы оценки качества')
+relevance_evaluator = RelevanceEvaluator(df)
+music_metrics = MusicMetrics(df)
+metrics_logger = MetricsLogger()
+print('Система оценки качества готова')
+
 
 GENRE_DESC = {
     'rock': 'рок, гитары, драйвовая', 'alternative': 'альтернативный рок',
@@ -127,7 +137,7 @@ print('documents created:', len(docs))
 emb = HuggingFaceEmbeddings(model_name='all-MiniLM-L6-v2', model_kwargs={'device': 'cpu'})
 VECTORSTORE = FAISS.from_documents(docs, emb)
 
-print("vector store created")
+print('vector store created')
 
 
 GENRE_MAP = {
@@ -289,23 +299,23 @@ def explain_mood(query: str) -> str:
 api_key = os.environ.get('OPENROUTER_API_KEY')
 if not api_key:
     raise ValueError('OPENROUTER_API_KEY не установлен')
-print("OPENROUTER_API_KEY found")
+print('OPENROUTER_API_KEY найден')
 
 LLM = ChatOpenAI(
-    model='openai/gpt-oss-120b:free',
+    model='openrouter/free',
     openai_api_key=api_key,
     openai_api_base='https://openrouter.ai/api/v1',
     temperature=0.3
 )
 
-SYSTEM_PROMPT = '''Ты DJ-ассистент для подбора музыки.
+SYSTEM_PROMPT = """Ты DJ-ассистент для подбора музыки.
 
 ПРАВИЛА:
 1. Всегда начинай с инструмента explain_mood, чтобы понять запрос
 2. Затем используй search_tracks для подбора треков
 3. Если нужно уточнить детали трека - используй get_track_info
 4. В финальном ответе укажи 3-5 треков с объяснением, почему они подходят, и ссылками на Spotify
-5. Отвечай на русском языке, живо, как настоящий DJ'''
+5. Отвечай на русском языке, живо, как настоящий DJ"""
 
 prompt=ChatPromptTemplate.from_messages([('system',SYSTEM_PROMPT), MessagesPlaceholder(variable_name='messages')])
 
@@ -313,19 +323,54 @@ TOOLS = [search_tracks, get_track_info, explain_mood]
 agent = create_react_agent(LLM, TOOLS, prompt=prompt)
 print('аgent created')
 
+try:
+    graph = agent.get_graph()
+    png_data = graph.draw_mermaid_png()
+
+    with open('agent_graph.png', 'wb') as f:
+        f.write(png_data)
+
+    GRAPH_IMAGE = png_data
+except Exception as e:
+    print(f'Не удалось визуализировать граф: {e}')
+    GRAPH_IMAGE = None
+
 
 def chat(message, history):
     if not message.strip():
-        return 'Введи запрос!'
+        return 'Введите запрос'
     try:
         result = agent.invoke({'messages':[('user',message)]})
+
+        try:
+            docs = VECTORSTORE.similarity_search(message, k=5)
+            tracks = []
+            for d in docs:
+                track_dict = d.metadata.copy()
+                track_dict['description'] = d.page_content
+                tracks.append(track_dict)
+            
+            relevance = relevance_evaluator.evaluate_recommendations(message, tracks)
+            metrics = music_metrics.calculate_all(tracks)
+
+            metrics_logger.log(message, relevance, metrics)
+
+            if relevance.get('avg_relevance', 0) < 0.4:
+                print(f'Низкая релевантность для запроса: {message}')
+                print(f"   Score: {relevance['avg_relevance']:.2f}")
+                print(f"   Интерпретация: {relevance.get('interpretation', '')}")
+            
+        except Exception as e:
+            print(f"Ошибка оценки качества: {e}")
+        
         return result['messages'][-1].content
     except Exception as e:
         return f'Ошибка: {e}'
 
+    
 
 with gr.Blocks(title='MusicMood RAG') as demo:
-    gr.Markdown('# MusicMood RAG\nDJ-агент на базе 20K треков Spotify. ReAct-агент с 3 инструментами.')
+    gr.Markdown('# MusicMood RAG\nDJ-агент на базе 10K треков Spotify. ReAct-агент с 3 инструментами.')
     gr.ChatInterface(
         fn=chat,
         examples=[
